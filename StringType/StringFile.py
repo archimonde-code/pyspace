@@ -1,17 +1,46 @@
-import time
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
+import requests
+from lxml import etree
+from fake_useragent import UserAgent
 
-driver = webdriver.Chrome()
 
-driver.get("https://www.baidu.com")
+class GetBook(object):
+    def __init__(self):
+        self.url = 'https://book.qidian.com/info/1020580616#Catalog'
+        ua = UserAgent(verify_ssl=False)
+        for i in range(1, 100):
+            self.headers = {
+                'User-Agent': ua.random
+            }
 
-# 元素
-login = driver.find_element_by_xpath("//*[@id=\"u1\"]/a[8]").click()
-time.sleep(2)
-username_login = driver.find_element_by_xpath("//*[@id=\"TANGRAM__PSP_10__footerULoginBtn\"]").click()
-username = driver.find_element_by_xpath("//*[@id=\"TANGRAM__PSP_10__userName\"]").send_keys("15139633525")
-pwd = driver.find_element_by_xpath("//*[@id=\"TANGRAM__PSP_10__password\"]").send_keys("Baidu2019..")
-login_btn = driver.find_element_by_xpath("//*[@id=\"TANGRAM__PSP_10__submit\"]").click()
-time.sleep(3)
-driver.close()
+    def get_html(self, url):
+        response = requests.get(url, headers=self.headers)
+        html = response.content.decode('utf-8')
+        return html
+
+    def parse_html(self, html):
+        target = etree.HTML(html)
+        links = target.xpath('//ul[@class="cf"]/li/a/@href')
+        for link in links:
+            host = 'https:'+link
+            # 解析链接地址
+            res = requests.get(host, headers=self.headers)
+            c = res.content.decode('utf-8')
+            target = etree.HTML(c)
+            names = target.xpath('//span[@class="content-wrap"]/text()')
+            results = target.xpath('//div[@class="read-content j_readContent"]/p/text()')
+            for name in names:
+                print(name)
+                with open('H:/Pycharm/' + name + '.txt', 'a') as f:
+                    for result in results:
+                        f.write(result+'\n')
+
+    def main(self):
+        url = self.url
+        html = self.get_html(url)
+        self.parse_html(html)
+
+
+if __name__ == '__main__':
+
+    spider = GetBook()
+    spider.main()
